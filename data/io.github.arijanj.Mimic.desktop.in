@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Mimic
+Comment=Manage default applications and file type associations
+Exec=mimic
+Icon=io.github.arijanj.Mimic
+Terminal=false
+Type=Application
+Categories=Utility;Settings;
+Keywords=defaults;applications;apps;filetypes;associations;mime
+StartupNotify=true

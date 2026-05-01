@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- Copyright 2026 ArijanJ -->
+<component type="desktop-application">
+  <id>io.github.arijanj.Mimic</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-2.0-or-later</project_license>
+
+  <name>Mimic</name>
+  <summary>Easily manage default applications</summary>
+  <description>
+    <p>Browse all your installed applications to view their associated and custom-added MIME types.</p>
+    <p>Add new associations for your existing applications, or select new apps to handle arbitrary associations.</p>
+    <p>Allows you to search through your applications and file types by name.</p>
+  </description>
+
+  <developer id="io.github.arijanj">
+    <name>Arijan J</name>
+  </developer>
+
+  <!-- Required: Should be a link to the upstream homepage for the component -->
+  <url type="homepage">https://github.com/ArijanJ/Mimic</url>
+  <!-- Recommended: It is highly recommended for open-source projects to display the source code repository -->
+  <url type="vcs-browser">https://github.com/ArijanJ/Mimic</url>
+  <!-- Should point to the software's bug tracking system, for users to report new bugs -->
+  <url type="bugtracker">https://github.com/ArijanJ/Mimic/issues</url>
+  <!-- URLs of this type should point to a webpage showing information on how to contribute to the described software project -->
+  <url type="contribute">https://github.com/ArijanJ/Mimic</url>
+
+  <translation type="gettext">Mimic</translation>
+  <!-- All graphical applications having a desktop file must have this tag in the MetaInfo.
+     If this is present, appstreamcli compose will pull icons, keywords and categories from the desktop file. -->
+  <launchable type="desktop-id">io.github.arijanj.Mimic.desktop</launchable>
+  <!-- Use the OARS website (https://hughsie.github.io/oars/generate.html) to generate these and make sure to use oars-1.1 -->
+  <content_rating type="oars-1.1" />
+
+  <!-- Applications should set a brand color in both light and dark variants like so -->
+  <branding>
+    <color type="primary" scheme_preference="light">#ffffff</color>
+    <color type="primary" scheme_preference="dark">#1e1e1e</color>
+  </branding>
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/ArijanJ/Mimic/refs/heads/main/static/screenshot-1.png</image>
+      <caption>Setting file associations for Firefox</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/ArijanJ/Mimic/refs/heads/main/static/screenshot-2.png</image>
+      <caption>Setting the default handler for text/csv</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/ArijanJ/Mimic/refs/heads/main/static/screenshot-3.png</image>
+      <caption>Adding a new association for Blender (model/obj)</caption>
+    </screenshot>
+  </screenshots>
+
+  <releases>
+    <release version="1.0.1" date="2025-05-03">
+      <description translate="no">
+        <p>Initial release</p>
+      </description>
+    </release>
+  </releases>
+
+</component>
