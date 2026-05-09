@@ -1,0 +1,16 @@
+name: Lint
+
+on: [push, pull_request]
+
+jobs:
+  ruff:
+    name: Ruff (lint and format)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint
+        uses: astral-sh/ruff-action@v3
+
+      - name: Format
+        run: ruff format --check --diff # previous step sets ruff up
