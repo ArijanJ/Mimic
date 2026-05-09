@@ -18,6 +18,7 @@
         "--filesystem=/var/lib/flatpak/exports/share/icons:ro",
         "--filesystem=~/.local/share/flatpak/exports/share/icons:ro",
         "--filesystem=/var/lib/snapd:ro",
+        "--filesystem=/snap:ro",
         "--filesystem=/run/current-system/sw/share/applications:ro",
         "--filesystem=xdg-config:create"
     ],
