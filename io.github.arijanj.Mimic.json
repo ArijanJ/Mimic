@@ -21,21 +21,9 @@
         "--filesystem=/run/current-system/sw/share/applications:ro",
         "--filesystem=xdg-config:create"
     ],
-    "cleanup": [
-        "/include",
-        "/lib/pkgconfig",
-        "/man",
-        "/share/doc",
-        "/share/gtk-doc",
-        "/share/man",
-        "/share/pkgconfig",
-        "*.la",
-        "*.a"
-    ],
     "modules": [
         {
             "name": "mimic",
-            "builddir": true,
             "buildsystem": "meson",
             "sources": [
                 {
