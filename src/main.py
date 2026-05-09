@@ -233,9 +233,11 @@ class MimicApplication(Adw.Application):
                 trigger=Gtk.ShortcutTrigger.parse_string("<Control>f"),
                 action=Gtk.CallbackAction.new(
                     lambda *_: (
-                        self.apps_search_bar.grab_focus()
-                        if stack.get_visible_child() == apps_overlay
-                        else self.filetypes_search_bar.grab_focus(),
+                        (
+                            self.apps_search_bar.grab_focus()
+                            if stack.get_visible_child() == apps_overlay
+                            else self.filetypes_search_bar.grab_focus()
+                        ),
                         True,
                     )[1]
                 ),

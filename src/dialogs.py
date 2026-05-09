@@ -365,7 +365,9 @@ class AppDetailsDialog:
                 print(f"Error saving: {e}")
 
             def update_app(app):
-                app.default_mime_types = self.mime_apps.defaults.get(self.desktop_id, [])
+                app.default_mime_types = self.mime_apps.defaults.get(
+                    self.desktop_id, []
+                )
                 app.refresh_mime_types()
 
             self._update_app_and_refresh(update_app)
