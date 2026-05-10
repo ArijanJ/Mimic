@@ -11,10 +11,6 @@ from .utils import (
 )
 from .widgets import AppList, MimeTypeList
 
-gi.require_version("Adw", "1")
-gi.require_version("Gtk", "4.0")
-
-
 @dataclass
 class DialogState:
     """Holds shared state for dialog callbacks."""

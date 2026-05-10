@@ -1,0 +1,180 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $MimicWindow: Adw.ApplicationWindow {
+  title: _("Mimic");
+  default-width: 550;
+  default-height: 700;
+  width-request: 360;
+
+  Adw.Breakpoint {
+    condition ("max-width: 400px")
+
+    setters {
+      toolbar_view.reveal-bottom-bars: true;
+      header_bar.title-widget: null;
+    }
+  }
+
+  ShortcutController {
+    Shortcut {
+      trigger: "<Control>f";
+      action: "action(win.focus-search)";
+    }
+
+    Shortcut {
+      trigger: "<Control>Tab";
+      action: "action(win.switch-tab)";
+    }
+
+    Shortcut {
+      trigger: "<Control><Shift>Tab";
+      action: "action(win.switch-tab)";
+    }
+  }
+
+  content: Adw.ToastOverlay toast_overlay {
+    child: Adw.ToolbarView toolbar_view {
+      top-bar-style: flat;
+      bottom-bar-style: flat;
+      reveal-bottom-bars: false;
+
+      [top]
+      Adw.HeaderBar header_bar {
+        title-widget: Adw.ViewSwitcher {
+          stack: main_stack;
+          policy: wide;
+        };
+
+        [end]
+        MenuButton {
+          icon-name: "open-menu-symbolic";
+          menu-model: primary_menu;
+        }
+
+        styles [
+          "flat",
+        ]
+      }
+
+      content: Adw.ViewStack main_stack {
+        margin-top: 9;
+
+        Adw.ViewStackPage {
+          name: "apps";
+          title: _("Applications");
+          icon-name: "grid-large-symbolic";
+
+          child: Overlay apps_overlay {
+            child: Box apps_page {
+              orientation: vertical;
+              spacing: 10;
+
+              Adw.Clamp {
+                maximum-size: 450;
+                tightening-threshold: 600;
+                margin-start: 12;
+                margin-end: 12;
+                margin-top: 8;
+
+                child: SearchEntry apps_search_bar {
+                  placeholder-text: _("Search applications…");
+                };
+              }
+
+              ScrolledWindow {
+                vexpand: true;
+
+                child: Adw.Clamp apps_scroll {
+                  maximum-size: 450;
+                  tightening-threshold: 600;
+                  margin-start: 12;
+                  margin-end: 12;
+                  margin-bottom: 16;
+                  margin-top: 8;
+                };
+              }
+            };
+          };
+        }
+
+        Adw.ViewStackPage {
+          name: "filetypes";
+          title: _("Filetypes");
+          icon-name: "paper-symbolic";
+
+          child: Overlay filetypes_overlay {
+            child: Box filetypes_page {
+              orientation: vertical;
+              spacing: 10;
+
+              Adw.Clamp {
+                maximum-size: 450;
+                tightening-threshold: 600;
+                margin-start: 12;
+                margin-end: 12;
+                margin-top: 8;
+
+                child: SearchEntry filetypes_search_bar {
+                  placeholder-text: _("Search mime types…");
+                };
+              }
+
+              ScrolledWindow {
+                vexpand: true;
+
+                child: Adw.Clamp filetypes_clamp {
+                  maximum-size: 450;
+                  tightening-threshold: 600;
+                  margin-start: 12;
+                  margin-end: 12;
+                  margin-bottom: 16;
+                  margin-top: 8;
+
+                  child: ListBox filetypes_listbox {
+                    styles [
+                      "boxed-list",
+                    ]
+
+                    selection-mode: none;
+                    valign: start;
+                  };
+                };
+              }
+            };
+          };
+        }
+      };
+
+      [bottom]
+      Adw.ViewSwitcherBar {
+        stack: main_stack;
+        reveal: true;
+      }
+    };
+  };
+}
+
+menu primary_menu {
+  item {
+    label: _("_Keyboard Shortcuts");
+    action: "app.shortcuts";
+  }
+
+  item {
+    label: _("_Show Other Apps");
+    action: "win.show_all_apps";
+    hidden-when: "action-disabled";
+  }
+
+  item {
+    label: _("_Hide Other Apps");
+    action: "win.hide_all_apps";
+    hidden-when: "action-disabled";
+  }
+
+  item {
+    label: _("_About Mimic");
+    action: "app.about";
+  }
+}

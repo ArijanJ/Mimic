@@ -2,11 +2,27 @@ pkgdatadir = get_option('prefix') / get_option('datadir') / meson.project_name()
 moduledir = pkgdatadir / 'mimic'
 gnome = import('gnome')
 
+blueprints = custom_target('blueprints',
+  input: files(
+    'window.blp',
+    'shortcuts-dialog.blp',
+  ),
+  output: '.',
+  command: [
+    find_program('blueprint-compiler', version: '>= 0.20.0'),
+    'batch-compile',
+    '@OUTPUT@',
+    '@CURRENT_SOURCE_DIR@',
+    '@INPUT@'
+  ],
+)
+
 gnome.compile_resources('mimic',
   'mimic.gresource.xml',
   gresource_bundle: true,
   install: true,
   install_dir: pkgdatadir,
+  dependencies: [blueprints],
 )
 
 python = import('python')
