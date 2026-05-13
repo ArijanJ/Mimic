@@ -47,8 +47,8 @@ def _load_app_icon(app_data, icon_theme, size=32):
                 Gtk.IconLookupFlags.PRELOAD,
             )
         )
-        img.set_pixel_size(size)
-        img.add_css_class("icon-dropshadow")
+    img.set_pixel_size(size)
+    img.add_css_class("icon-dropshadow")
 
     return img
 
@@ -58,6 +58,8 @@ def _load_first_valid_icon(apps, icon_theme, size=32):
     for app_data in apps:
         if app_data.icon_file:
             img = Gtk.Image.new_from_file(app_data.icon_file)
+            img.set_pixel_size(size)
+            return img
 
         else:
             icon_name = app_data.icon_name
