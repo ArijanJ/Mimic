@@ -1,7 +1,6 @@
 import re
 from dataclasses import dataclass
 
-import gi
 from gi.repository import Adw, Gio, GLib, Gtk, Pango
 
 from .utils import (

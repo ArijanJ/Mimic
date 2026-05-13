@@ -2,7 +2,6 @@ import os
 import sys
 import threading
 
-import gi
 from gi.repository import Adw, Gio, GLib, Gtk
 
 from .dialogs import create_app_details_dialog, create_mime_type_dialog
@@ -10,18 +9,19 @@ from .mimeapps import MimeApps, _get_host_prefix, _is_flatpak
 from .utils import _get_app_group_key
 from .widgets import AppList
 
+
 @Gtk.Template(resource_path="/io/github/arijanj/Mimic/window.ui")
 class MimicWindow(Adw.ApplicationWindow):
     __gtype_name__ = "MimicWindow"
 
-    toast_overlay        = Gtk.Template.Child()
-    main_stack           = Gtk.Template.Child()
-    apps_overlay         = Gtk.Template.Child()
-    apps_search_bar      = Gtk.Template.Child()
-    apps_scroll          = Gtk.Template.Child()
-    filetypes_overlay    = Gtk.Template.Child()
+    toast_overlay = Gtk.Template.Child()
+    main_stack = Gtk.Template.Child()
+    apps_overlay = Gtk.Template.Child()
+    apps_search_bar = Gtk.Template.Child()
+    apps_scroll = Gtk.Template.Child()
+    filetypes_overlay = Gtk.Template.Child()
     filetypes_search_bar = Gtk.Template.Child()
-    filetypes_listbox    = Gtk.Template.Child()
+    filetypes_listbox = Gtk.Template.Child()
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -36,8 +36,12 @@ class MimicWindow(Adw.ApplicationWindow):
 
         self.create_action("focus-search", self._on_focus_search)
         self.create_action("switch-tab", self._on_switch_tab)
-        self.show_apps_action = self.create_action("show_all_apps", self._on_show_all_apps)
-        self.hide_apps_action = self.create_action("hide_all_apps", self._on_hide_all_apps)
+        self.show_apps_action = self.create_action(
+            "show_all_apps", self._on_show_all_apps
+        )
+        self.hide_apps_action = self.create_action(
+            "hide_all_apps", self._on_hide_all_apps
+        )
         self.hide_apps_action.set_enabled(False)
 
     def create_action(self, name, callback):
@@ -72,7 +76,9 @@ class MimicWindow(Adw.ApplicationWindow):
         self.apps_list_widget._listbox.set_filter_func(self.filter_apps_row)
 
         self.apps_search_bar.connect("search-changed", self.on_apps_search_changed)
-        self.filetypes_search_bar.connect("search-changed", self.on_filetypes_search_changed)
+        self.filetypes_search_bar.connect(
+            "search-changed", self.on_filetypes_search_changed
+        )
 
         self._setup_loading_states()
         GLib.idle_add(self._populate_apps_async)
@@ -104,7 +110,9 @@ class MimicWindow(Adw.ApplicationWindow):
 
     def _populate_apps_async(self):
         def load():
-            all_apps = self.mime_apps.get_all_desktop_app_infos(include_useless_apps=True)
+            all_apps = self.mime_apps.get_all_desktop_app_infos(
+                include_useless_apps=True
+            )
             all_apps.sort(key=lambda app: (app.name or "zzzebra").lower())
 
             grouped = {}
@@ -202,7 +210,11 @@ class MimicWindow(Adw.ApplicationWindow):
         self.apps_list_widget.set_show_all_apps(show)
         self.show_apps_action.set_enabled(not show)
         self.hide_apps_action.set_enabled(show)
-        msg = _("Showing apps with no MIME associations") if show else _("Hiding apps with no MIME associations")
+        msg = (
+            _("Showing apps with no MIME associations")
+            if show
+            else _("Hiding apps with no MIME associations")
+        )
         self.toast_overlay.add_toast(Adw.Toast(title=msg, timeout=2))
 
     def on_apps_search_changed(self, entry):
@@ -264,7 +276,9 @@ class MimicApplication(Adw.Application):
         about.present(self.props.active_window)
 
     def on_shortcuts_action(self, *args):
-        builder = Gtk.Builder.new_from_resource("/io/github/arijanj/Mimic/shortcuts-dialog.ui")
+        builder = Gtk.Builder.new_from_resource(
+            "/io/github/arijanj/Mimic/shortcuts-dialog.ui"
+        )
         dialog = builder.get_object("shortcuts_dialog")
         dialog.present(self.props.active_window)
 
