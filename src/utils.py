@@ -34,41 +34,11 @@ def _get_app_group_key(app):
 def _load_app_icon(app_data, icon_theme, size=32):
     """Load icon from app data using Gtk.IconTheme."""
     if app_data.icon_file:
-        try:
-            img = Gtk.Image.new_from_file(app_data.icon_file)
-            img.set_pixel_size(size)
-            return img
-        except Exception:
-            pass
-
-    icon_name = app_data.icon_name or "application-x-executable"
-    paintable = icon_theme.lookup_icon(
-        icon_name,
-        None,
-        size,
-        1,
-        Gtk.TextDirection.NONE,
-        Gtk.IconLookupFlags.PRELOAD,
-    )
-    img = Gtk.Image.new_from_paintable(paintable)
-    img.set_pixel_size(size)
-    return img
-
-
-def _load_first_valid_icon(apps, icon_theme, size=32):
-    """Load first non-generic icon from a list of apps."""
-    for app_data in apps:
-        if app_data.icon_file:
-            try:
-                img = Gtk.Image.new_from_file(app_data.icon_file)
-                img.set_pixel_size(size)
-                return img
-            except Exception:
-                pass
-
-        icon_name = app_data.icon_name
-        if icon_name and icon_name != "application-x-executable":
-            paintable = icon_theme.lookup_icon(
+        img = Gtk.Image.new_from_file(app_data.icon_file)
+    else:
+        icon_name = app_data.icon_name or "application-x-executable"
+        img = Gtk.Image.new_from_paintable(
+            icon_theme.lookup_icon(
                 icon_name,
                 None,
                 size,
@@ -76,12 +46,39 @@ def _load_first_valid_icon(apps, icon_theme, size=32):
                 Gtk.TextDirection.NONE,
                 Gtk.IconLookupFlags.PRELOAD,
             )
-            img = Gtk.Image.new_from_paintable(paintable)
-            img.set_pixel_size(size)
-            return img
+        )
+        img.set_pixel_size(size)
+        img.add_css_class("icon-dropshadow")
+
+    return img
+
+
+def _load_first_valid_icon(apps, icon_theme, size=32):
+    """Load first non-generic icon from a list of apps."""
+    for app_data in apps:
+        if app_data.icon_file:
+            img = Gtk.Image.new_from_file(app_data.icon_file)
+
+        else:
+            icon_name = app_data.icon_name
+            if icon_name and icon_name != "application-x-executable":
+                img = Gtk.Image.new_from_paintable(
+                    icon_theme.lookup_icon(
+                        icon_name,
+                        None,
+                        size,
+                        1,
+                        Gtk.TextDirection.NONE,
+                        Gtk.IconLookupFlags.PRELOAD,
+                    )
+                )
+                img.set_pixel_size(size)
+                img.add_css_class("icon-dropshadow")
+                return img
 
     img = Gtk.Image.new_from_icon_name("application-x-executable")
     img.set_pixel_size(size)
+    img.add_css_class("icon-dropshadow")
     return img
 
 

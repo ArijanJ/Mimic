@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <gresources>
   <gresource prefix="/io/github/arijanj/Mimic">
+    <file preprocess="xml-stripblanks">window.ui</file>
+    <file preprocess="xml-stripblanks">shortcuts-dialog.ui</file>
+
+    <file preprocess="xml-stripblanks">icons/scalable/actions/grid-large-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/paper-symbolic.svg</file>
   </gresource>
 </gresources>

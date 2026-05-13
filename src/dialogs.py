@@ -1,7 +1,6 @@
 import re
 from dataclasses import dataclass
 
-import gi
 from gi.repository import Adw, Gio, GLib, Gtk, Pango
 
 from .utils import (
@@ -10,9 +9,6 @@ from .utils import (
     _trim_path,
 )
 from .widgets import AppList, MimeTypeList
-
-gi.require_version("Adw", "1")
-gi.require_version("Gtk", "4.0")
 
 
 @dataclass
@@ -477,7 +473,7 @@ class AppDetailsDialog:
         self.dialog = Adw.Dialog()
         self.dialog.set_follows_content_size(True)
         self.dialog.set_child(dialog_content)
-        self.dialog.set_size_request(450, -1)
+        self.dialog.set_size_request(400, -1)
 
         _setup_dialog_shortcuts(self.dialog, self.dialog.close)
 

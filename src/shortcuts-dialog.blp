@@ -1,0 +1,32 @@
+using Gtk 4.0;
+using Adw 1;
+
+Adw.ShortcutsDialog shortcuts_dialog {
+  Adw.ShortcutsSection {
+    title: _("General");
+
+    Adw.ShortcutsItem {
+      title: _("Quit");
+      accelerator: "<Control>q";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Search");
+      accelerator: "<Control>f";
+    }
+  }
+
+  Adw.ShortcutsSection {
+    title: _("Navigation");
+
+    Adw.ShortcutsItem {
+      title: _("Switch Tab");
+      accelerator: "<Control>Tab";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Close Dialog");
+      accelerator: "Escape";
+    }
+  }
+}

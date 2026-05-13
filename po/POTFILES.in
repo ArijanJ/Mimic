@@ -3,5 +3,8 @@
 data/io.github.arijanj.Mimic.desktop.in
 data/io.github.arijanj.Mimic.metainfo.xml.in
 data/io.github.arijanj.Mimic.gschema.xml
-src/main.py
 src/dialogs.py
+src/main.py
+src/shortcuts-dialog.blp
+src/widgets.py
+src/window.blp
