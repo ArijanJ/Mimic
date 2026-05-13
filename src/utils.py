@@ -36,9 +36,20 @@ def _load_app_icon(app_data, icon_theme, size=32):
     if app_data.icon_file:
         img = Gtk.Image.new_from_file(app_data.icon_file)
     else:
-        img = Gtk.Image.new_from_icon_name(app_data.icon_name or "application-x-executable")
-    img.set_pixel_size(size)
-    img.add_css_class("icon-dropshadow")
+        icon_name = app_data.icon_name or "application-x-executable"
+        img = Gtk.Image.new_from_paintable(
+            icon_theme.lookup_icon(
+                icon_name,
+                None,
+                size,
+                1,
+                Gtk.TextDirection.NONE,
+                Gtk.IconLookupFlags.PRELOAD,
+            )
+        )
+        img.set_pixel_size(size)
+        img.add_css_class("icon-dropshadow")
+
     return img
 
 
@@ -47,16 +58,27 @@ def _load_first_valid_icon(apps, icon_theme, size=32):
     for app_data in apps:
         if app_data.icon_file:
             img = Gtk.Image.new_from_file(app_data.icon_file)
-            img.set_pixel_size(size)
-            return img
-        icon_name = app_data.icon_name
-        if icon_name and icon_name != "application-x-executable":
-            img = Gtk.Image.new_from_icon_name(icon_name)
-            img.set_pixel_size(size)
-            return img
+
+        else:
+            icon_name = app_data.icon_name
+            if icon_name and icon_name != "application-x-executable":
+                img = Gtk.Image.new_from_paintable(
+                    icon_theme.lookup_icon(
+                        icon_name,
+                        None,
+                        size,
+                        1,
+                        Gtk.TextDirection.NONE,
+                        Gtk.IconLookupFlags.PRELOAD,
+                    )
+                )
+                img.set_pixel_size(size)
+                img.add_css_class("icon-dropshadow")
+                return img
 
     img = Gtk.Image.new_from_icon_name("application-x-executable")
     img.set_pixel_size(size)
+    img.add_css_class("icon-dropshadow")
     return img
 
 
