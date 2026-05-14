@@ -55,7 +55,16 @@
   </screenshots>
 
   <releases>
-    <release version="1.0.1" date="2025-05-03">
+    <release version="1.1.0" date="2026-05-14">
+      <description translate="no">
+        <ul>
+            <li>Adds support for picking and parsing desktop-specific defaults</li>
+            <li>Now syncs and shows implicit defaults in the Applications view as well</li>
+            <li>Some UI updated to use Blueprint for easier maintenance</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.0.1" date="2026-05-03">
       <description translate="no">
         <p>Initial release</p>
       </description>
