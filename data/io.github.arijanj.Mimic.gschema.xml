@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="mimic">
-	<schema id="io.github.arijanj.Mimic" path="/io.github.arijanj.Mimic/">
+	<schema id="io.github.arijanj.Mimic" path="/io/github/arijanj/Mimic/">
+		<key name="selected-desktop" type="s">
+			<default>''</default>
+			<summary>Selected desktop environment for defaults</summary>
+			<description>Which desktop environment's mimeapps defaults to use (e.g. gnome, kde, or empty for none)</description>
+		</key>
 	</schema>
 </schemalist>

@@ -1,7 +1,7 @@
 import gi
 from gi.repository import Adw, Gio, GLib, Gtk
 
-from .utils import _load_app_icon, _trim_path
+from .utils import _format_desktop_environment_name, _load_app_icon, _trim_path
 
 gi.require_version("Adw", "1")
 gi.require_version("Gtk", "4.0")
@@ -259,7 +259,7 @@ class AppList(Gtk.Box):
 
         default_info = self.mime_apps.get_default_info_for_mime_type(self.mime_type)
         current_default = default_info["desktop_id"] if default_info else None
-        is_implicit = default_info["is_implicit"] if default_info else False
+        default_source = default_info["source"] if default_info else "inherent"
 
         for desktop_id in self._items:
             app_data = self.mime_apps.get_desktop_app_info_by_id(desktop_id)
@@ -270,7 +270,14 @@ class AppList(Gtk.Box):
             row.set_subtitle(GLib.markup_escape_text(desktop_id))
 
             is_current = desktop_id == current_default
-            if is_current and is_implicit:
+            if is_current and default_source == "desktop":
+                formatted_desktop_name = _format_desktop_environment_name(
+                    self.mime_apps.get_selected_desktop()
+                )
+                row.set_subtitle(
+                    f"{desktop_id}\nImplicit {formatted_desktop_name} default"
+                )
+            elif is_current and default_source == "inherent":
                 row.set_subtitle(f"{desktop_id}\nSystem default (not explicitly set)")
             elif self.mime_type not in app_data.all_mime_types:
                 row.set_subtitle(
@@ -433,6 +440,18 @@ class MimeTypeList(Gtk.Box):
             self._app_info.is_custom_association(mime_type) if self._app_info else False
         )
 
+        default_info = self.mime_apps.get_default_info_for_mime_type(mime_type)
+        is_desktop_default = (
+            default_info
+            and default_info["source"] == "desktop"
+            and default_info["desktop_id"] == self.desktop_id
+        )
+        is_inherent_default = (
+            default_info
+            and default_info["source"] == "inherent"
+            and default_info["desktop_id"] == self.desktop_id
+        )
+
         row = Adw.ActionRow()
         row.set_title(GLib.markup_escape_text(description))
         row.set_hexpand(True)
@@ -442,6 +461,21 @@ class MimeTypeList(Gtk.Box):
         check = Gtk.CheckButton()
         check.set_active(is_active)
         check.set_valign(Gtk.Align.CENTER)
+
+        if is_desktop_default:
+            check.set_sensitive(False)
+            desktop_name = (
+                _format_desktop_environment_name(self.mime_apps.get_selected_desktop())
+                or "your DE"
+            )
+            row.set_tooltip_text(
+                f"This default is set by {desktop_name}. Select a different app to overwrite it."
+            )
+        elif is_inherent_default:
+            check.set_sensitive(False)
+            row.set_tooltip_text(
+                f"This is an implicit default and it cannot be unset. Set a different app for '{mime_type}' if needed."
+            )
 
         if is_custom and self._on_delete:
             delete_btn = Gtk.Button(

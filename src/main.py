@@ -4,9 +4,13 @@ import threading
 
 from gi.repository import Adw, Gio, GLib, Gtk
 
-from .dialogs import create_app_details_dialog, create_mime_type_dialog
+from .dialogs import (
+    create_app_details_dialog,
+    create_desktop_defaults_dialog,
+    create_mime_type_dialog,
+)
 from .mimeapps import MimeApps, _get_host_prefix, _is_flatpak
-from .utils import _get_app_group_key
+from .utils import _format_desktop_environment_name, _get_app_group_key, _show_toast
 from .widgets import AppList
 
 
@@ -83,6 +87,25 @@ class MimicWindow(Adw.ApplicationWindow):
         self._setup_loading_states()
         GLib.idle_add(self._populate_apps_async)
         GLib.idle_add(self._populate_filetypes_async)
+        GLib.idle_add(self._maybe_show_desktop_dialogs)
+
+    def _maybe_show_desktop_dialogs(self):
+        """Show first-run dialog or desktop defaults toast if applicable."""
+        available = self.mime_apps.get_available_desktop_defaults()
+        if (
+            available
+            and self.mime_apps.settings.get_user_value("selected-desktop") is None
+        ):
+            create_desktop_defaults_dialog(
+                self,
+                self.mime_apps,
+                on_selection_complete=lambda: None,
+            )
+        elif self.mime_apps.get_selected_desktop():
+            desktop_name = _format_desktop_environment_name(
+                self.mime_apps.get_selected_desktop()
+            )
+            _show_toast(self.toast_overlay, f"{desktop_name} defaults loaded")
 
     def _create_loading_overlay(self, overlay, label_text):
         spinner = Adw.Spinner()
@@ -215,7 +238,7 @@ class MimicWindow(Adw.ApplicationWindow):
             if show
             else _("Hiding apps with no MIME associations")
         )
-        self.toast_overlay.add_toast(Adw.Toast(title=msg, timeout=2))
+        _show_toast(self.toast_overlay, msg)
 
     def on_apps_search_changed(self, entry):
         self.apps_list_widget.filter(entry.get_text())
@@ -282,6 +305,19 @@ class MimicApplication(Adw.Application):
         dialog = builder.get_object("shortcuts_dialog")
         dialog.present(self.props.active_window)
 
+    def on_desktop_defaults_action(self, *args):
+        window = self.props.active_window
+        if window:
+            create_desktop_defaults_dialog(
+                window,
+                self.mime_apps,
+                on_selection_complete=lambda: self._on_desktop_defaults_changed(window),
+            )
+
+    def _on_desktop_defaults_changed(self, window):
+        self.mime_apps.build_mime_defaults()
+        _show_toast(window.toast_overlay, _("Desktop defaults updated"))
+
     def create_action(self, name, callback, shortcuts=None):
         action = Gio.SimpleAction.new(name, None)
         action.connect("activate", callback)
@@ -298,15 +334,17 @@ class MimicApplication(Adw.Application):
         self.create_action("quit", lambda *_: self.quit(), ["<control>q"])
         self.create_action("about", self.on_about_action)
         self.create_action("shortcuts", self.on_shortcuts_action, ["<Control>question"])
-        self.mime_apps = MimeApps()
+        self.create_action("desktop_defaults", self.on_desktop_defaults_action)
+        self.settings = Gio.Settings.new("io.github.arijanj.Mimic")
+        self.mime_apps = MimeApps(settings=self.settings)
         self.mime_apps.parse()
+        self.mime_apps.set_selected_desktop(self.mime_apps.get_selected_desktop())
 
     def do_activate(self):
         window = self.props.active_window
         if not window:
             window = MimicWindow(application=self)
             window.setup(self.mime_apps)
-
         window.present()
 
 

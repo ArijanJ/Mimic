@@ -3,6 +3,8 @@ import os
 from dataclasses import dataclass, field
 from typing import Optional
 
+from gi.repository import Gio
+
 
 @dataclass
 class DesktopAppInfo:
@@ -54,19 +56,23 @@ def _is_flatpak() -> bool:
 def _get_host_prefix() -> str:
     if _is_flatpak():
         return "/run/host"
-    return ""
+    return "/"
 
 
 class MimeApps:
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(
+        self, config_path: Optional[str] = None, settings: Optional[Gio.Settings] = None
+    ):
         if config_path is None:
             config_path = os.path.expanduser("~/.config/mimeapps.list")
         self.config_path = config_path
+        self.settings = settings
         self.defaults: dict = {}
         self.added_associations: dict = {}
         self._other_sections: dict = {}
         self._mime_associations: Optional[dict] = None
         self._mime_defaults_effective: Optional[dict] = None
+        self._desktop_defaults: dict = {}
 
     def _get_applications_dirs(self) -> list:
         """Get all applications directories in XDG order."""
@@ -225,29 +231,42 @@ class MimeApps:
         return mime_to_apps
 
     def build_mime_defaults(self) -> dict:
-        """Build effective defaults with fallback to first association."""
+        """Build effective defaults with priority: user -> desktop -> inherent.
+
+        Returns dict of {mime_type: {desktop_id, source}}
+        where source is one of: 'user', 'desktop', 'inherent'
+        """
         self._ensure_associations_cache()
 
         desktop_file_paths = self._get_desktop_file_paths()
         mime_defaults_effective = {}
 
+        # Priority 1: Inherent defaults (first app from associations)
+        for mime_type, apps in self._mime_associations.items():
+            if apps:
+                mime_defaults_effective[mime_type] = {
+                    "desktop_id": apps[0],
+                    "source": "inherent",
+                }
+
+        # Priority 2: Desktop-specific defaults (override inherent)
+        for desktop_id, mime_types in self._desktop_defaults.items():
+            if desktop_id not in desktop_file_paths:
+                continue
+            for mime_type in mime_types:
+                mime_defaults_effective[mime_type] = {
+                    "desktop_id": desktop_id,
+                    "source": "desktop",
+                }
+
+        # User defaults, override everything
         for desktop_id, mime_types in self.defaults.items():
             if desktop_id not in desktop_file_paths:
                 continue
             for mime_type in mime_types:
-                if mime_type not in mime_defaults_effective:
-                    mime_defaults_effective[mime_type] = {
-                        "desktop_id": desktop_id,
-                        "is_implicit": False,
-                    }
-
-        for mime_type, apps in self._mime_associations.items():
-            if mime_type in mime_defaults_effective:
-                continue
-            if apps:
                 mime_defaults_effective[mime_type] = {
-                    "desktop_id": apps[0],
-                    "is_implicit": True,
+                    "desktop_id": desktop_id,
+                    "source": "user",
                 }
 
         self._mime_defaults_effective = mime_defaults_effective
@@ -260,6 +279,7 @@ class MimeApps:
         self._other_sections = {}
         self._mime_associations = None
         self._mime_defaults_effective = None
+        self._desktop_defaults = {}
 
         if not os.path.exists(self.config_path):
             return
@@ -286,8 +306,10 @@ class MimeApps:
             print(f"Error parsing mimeapps.list: {e}")
 
     def get_defaults_for_desktop_file(self, desktop_id: str) -> list:
-        """Get mime types this desktop file is the default for."""
-        return self.defaults.get(desktop_id, [])
+        """Get mime types this desktop file is the default for (user + desktop-specific)."""
+        user_defaults = self.defaults.get(desktop_id, [])
+        desktop_defaults = self._desktop_defaults.get(desktop_id, [])
+        return list(dict.fromkeys(user_defaults + desktop_defaults))
 
     def _ensure_associations_cache(self) -> None:
         """Ensure the associations cache is built."""
@@ -306,9 +328,20 @@ class MimeApps:
         return result["desktop_id"] if result else None
 
     def get_default_info_for_mime_type(self, mime_type: str) -> Optional[dict]:
-        """Get default info dict with desktop_id and is_implicit flag."""
+        """Get default info dict with desktop_id and source.
+
+        Returns dict with:
+        - desktop_id: The desktop file ID
+        - source: One of 'user', 'desktop', 'inherent'
+        """
         self._ensure_defaults_cache()
-        return self._mime_defaults_effective.get(mime_type)
+        info = self._mime_defaults_effective.get(mime_type)
+        if info:
+            return {
+                "desktop_id": info["desktop_id"],
+                "source": info["source"],
+            }
+        return None
 
     def get_apps_for_mime_type(self, mime_type: str) -> list:
         """Get all apps that can handle a mime type."""
@@ -425,7 +458,7 @@ class MimeApps:
         """Build a DesktopAppInfo object from parsed desktop file data."""
         icon_name, icon_file = self._load_icon(data["icon_name"])
         added = self.get_associations_for_desktop_file(desktop_id)
-        defaults = self.defaults.get(desktop_id, [])
+        defaults = self.get_defaults_for_desktop_file(desktop_id)
 
         return DesktopAppInfo(
             desktop_id=desktop_id,
@@ -467,3 +500,82 @@ class MimeApps:
             return None
 
         return self._build_desktop_app_info(desktop_id, path, data)
+
+    def _get_desktop_specific_mimeapps_files(self) -> dict:
+        """Find all desktop-specific mimeapps.list files.
+
+        Returns dict of {desktop_name: file_path}
+        """
+        host = _get_host_prefix()
+        apps_dir = os.path.join(host, "usr", "share", "applications")
+
+        desktop_files = {}
+        if not os.path.isdir(apps_dir):
+            return desktop_files
+
+        for filename in os.listdir(apps_dir):
+            if filename.endswith("-mimeapps.list"):
+                desktop_name = filename.replace("-mimeapps.list", "").lower()
+                full_path = os.path.join(apps_dir, filename)
+                desktop_files[desktop_name] = full_path
+
+        return desktop_files
+
+    def _parse_desktop_specific_mimeapps(self, file_path: str) -> dict:
+        """Parse a desktop-specific mimeapps.list file.
+
+        Returns defaults dict in same format as self.defaults
+        """
+        defaults = {}
+        if not os.path.exists(file_path):
+            return defaults
+
+        config = configparser.ConfigParser(interpolation=None)
+        try:
+            config.read(file_path)
+            if config.has_section("Default Applications"):
+                for mime_type, desktop_file in config.items("Default Applications"):
+                    desktop_id = desktop_file.strip().split(";")[0]
+                    if desktop_id not in defaults:
+                        defaults[desktop_id] = []
+                    defaults[desktop_id].append(mime_type)
+        except Exception as e:
+            print(f"Error parsing desktop-specific mimeapps: {e}")
+
+        return defaults
+
+    def get_available_desktop_defaults(self) -> dict:
+        """Get all available desktop-specific mimeapps defaults.
+
+        Returns dict of {desktop_name: defaults_dict}
+        """
+        available = {}
+        desktop_files = self._get_desktop_specific_mimeapps_files()
+
+        for desktop_name, file_path in desktop_files.items():
+            defaults = self._parse_desktop_specific_mimeapps(file_path)
+            if defaults:
+                available[desktop_name] = defaults
+
+        return available
+
+    def set_selected_desktop(self, desktop_name: Optional[str]) -> None:
+        """Set which desktop environment's defaults to use."""
+        if self.settings:
+            self.settings.set_string("selected-desktop", desktop_name or "")
+        self._desktop_defaults = {}
+        self._mime_defaults_effective = None
+
+        if desktop_name:
+            desktop_files = self._get_desktop_specific_mimeapps_files()
+            if desktop_name in desktop_files:
+                self._desktop_defaults = self._parse_desktop_specific_mimeapps(
+                    desktop_files[desktop_name]
+                )
+
+    def get_selected_desktop(self) -> Optional[str]:
+        """Get the currently selected desktop environment."""
+        if self.settings:
+            value = self.settings.get_string("selected-desktop")
+            return value if value else None
+        return None

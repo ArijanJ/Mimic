@@ -4,11 +4,111 @@ from dataclasses import dataclass
 from gi.repository import Adw, Gio, GLib, Gtk, Pango
 
 from .utils import (
+    _format_desktop_environment_name,
     _load_app_icon,
     _setup_dialog_shortcuts,
     _trim_path,
 )
 from .widgets import AppList, MimeTypeList
+
+
+class DesktopDefaultsDialog:
+    """Dialog for selecting which desktop environment defaults to import."""
+
+    def __init__(self, parent, mime_apps, on_selection_complete):
+        self.parent = parent
+        self.mime_apps = mime_apps
+        self.on_selection_complete = on_selection_complete
+        self.dialog = None
+        self.selected_desktop = None
+        self.radio_rows = []
+
+    def _on_apply(self, btn):
+        active_row = None
+        for row in self.radio_rows:
+            if row.get_active():
+                active_row = row
+                break
+
+        if active_row:
+            desktop_name = active_row._desktop_name
+            self.mime_apps.set_selected_desktop(
+                desktop_name if desktop_name != "none" else None
+            )
+
+        self.dialog.close()
+        if self.on_selection_complete:
+            self.on_selection_complete()
+
+    def present(self):
+        available_desktops = self.mime_apps.get_available_desktop_defaults()
+
+        content = Adw.PreferencesGroup()
+        content.set_title("Mimic detected additional desktop defaults")
+        content.set_description(
+            "Are you currently using any of these desktop environments?"
+        )
+
+        radio_group = None
+        self.radio_rows = []
+
+        for desktop_name in sorted(available_desktops.keys()):
+            defaults_count = len(available_desktops[desktop_name])
+            radio = Gtk.CheckButton(
+                label=f" {_format_desktop_environment_name(desktop_name)} ({defaults_count} defaults)",
+            )
+            if radio_group:
+                radio.set_group(radio_group)
+            else:
+                radio_group = radio
+            radio._desktop_name = desktop_name
+            content.add(radio)
+            self.radio_rows.append(radio)
+
+        none_radio = Gtk.CheckButton(
+            label=" None (ignore desktop defaults)",
+        )
+        none_radio.set_group(radio_group)
+        none_radio._desktop_name = "none"
+        content.add(none_radio)
+        self.radio_rows.append(none_radio)
+
+        current_desktop = self.mime_apps.get_selected_desktop()
+        if current_desktop:
+            for radio in self.radio_rows:
+                if radio._desktop_name == current_desktop:
+                    radio.set_active(True)
+                    break
+        else:
+            none_radio.set_active(True)
+
+        apply_btn = Gtk.Button(
+            label="Apply",
+            css_classes=["pill", "suggested-action"],
+            hexpand=True,
+        )
+        apply_btn.connect("clicked", self._on_apply)
+
+        btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        btn_box.set_hexpand(True)
+        btn_box.set_margin_top(12)
+        btn_box.append(apply_btn)
+
+        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        main_box.set_margin_top(18)
+        main_box.set_margin_bottom(18)
+        main_box.set_margin_start(18)
+        main_box.set_margin_end(18)
+        main_box.append(content)
+        main_box.append(btn_box)
+
+        self.dialog = Adw.Dialog()
+        self.dialog.set_follows_content_size(True)
+        self.dialog.set_child(main_box)
+        self.dialog.set_size_request(400, -1)
+
+        _setup_dialog_shortcuts(self.dialog, self.dialog.close)
+        self.dialog.present(self.parent.get_root())
 
 
 @dataclass
@@ -35,8 +135,8 @@ class MimeTypeDialog:
         self.current_default = (
             self.default_info["desktop_id"] if self.default_info else None
         )
-        self.is_implicit = (
-            self.default_info["is_implicit"] if self.default_info else False
+        self.default_source = (
+            self.default_info["source"] if self.default_info else "inherent"
         )
         self.app_selection_widget = None
         self.dialog = None
@@ -109,7 +209,7 @@ class MimeTypeDialog:
         )
 
         if selected_desktop:
-            if self.is_implicit:
+            if self.default_source in ("inherent", "desktop"):
                 self.mime_apps.add_default(self.mime_type, selected_desktop)
             elif selected_desktop != self.current_default:
                 if self.current_default:
@@ -264,7 +364,11 @@ class AppDetailsDialog:
         self.base_types = set(app_info.base_mime_types)
         self.custom_types = set(app_info.added_mime_types)
         self.supported_types = sorted(self.base_types | self.custom_types)
-        self.active_types = mime_apps.get_defaults_for_desktop_file(self.desktop_id)
+        self.active_types = [
+            mt
+            for mt in self.supported_types
+            if mime_apps.get_default_for_mime_type(mt) == self.desktop_id
+        ]
 
     def _build_info_box(self):
         executable = self.app_data.exec or "N/A"
@@ -384,13 +488,20 @@ class AppDetailsDialog:
         )
         content.append(select_all_btn)
 
+        def get_enabled_checks():
+            return [
+                check for check in self.checkboxes.values() if check.get_sensitive()
+            ]
+
         def update_select_all_label():
-            all_checked = all(check.get_active() for check in self.checkboxes.values())
+            enabled_checks = get_enabled_checks()
+            all_checked = all(check.get_active() for check in enabled_checks)
             select_all_btn.set_label("Deselect all" if all_checked else "Select all")
 
         def on_select_all_clicked(*_):
-            all_checked = all(check.get_active() for check in self.checkboxes.values())
-            for check in self.checkboxes.values():
+            enabled_checks = get_enabled_checks()
+            all_checked = all(check.get_active() for check in enabled_checks)
+            for check in enabled_checks:
                 check.set_active(not all_checked)
             update_select_all_label()
 
@@ -643,3 +754,8 @@ def create_app_details_dialog(
     AppDetailsDialog(
         row, app_data, mime_apps, icon_theme, apps_list_widget, grouped_apps
     ).present()
+
+
+def create_desktop_defaults_dialog(parent, mime_apps, on_selection_complete=None):
+    """Create dialog for selecting desktop environment defaults."""
+    DesktopDefaultsDialog(parent, mime_apps, on_selection_complete).present()

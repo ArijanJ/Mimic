@@ -1,10 +1,15 @@
 import gi
-from gi.repository import Gtk
+from gi.repository import Adw, Gtk
 
 from .mimeapps import _is_flatpak
 
 gi.require_version("Adw", "1")
 gi.require_version("Gtk", "4.0")
+
+
+def _show_toast(toast_overlay, message, timeout=2):
+    """Show a toast notification on the given overlay."""
+    toast_overlay.add_toast(Adw.Toast(title=message, timeout=timeout))
 
 
 def _trim_path(path):
@@ -82,6 +87,15 @@ def _load_first_valid_icon(apps, icon_theme, size=32):
     img.set_pixel_size(size)
     img.add_css_class("icon-dropshadow")
     return img
+
+
+def _format_desktop_environment_name(desktop_name):
+    """Format desktop name with proper capitalization for known desktops."""
+    return (
+        desktop_name.upper()
+        if desktop_name in ["xfce", "kde", "gnome", "mate"]
+        else desktop_name
+    )
 
 
 def _setup_dialog_shortcuts(dialog, close_callback):
