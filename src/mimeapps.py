@@ -69,6 +69,8 @@ class MimeApps:
         self.settings = settings
         self.defaults: dict = {}
         self.added_associations: dict = {}
+        self.local_defaults: dict = {}
+        self.local_added_associations: dict = {}
         self._other_sections: dict = {}
         self._mime_associations: Optional[dict] = None
         self._mime_defaults_effective: Optional[dict] = None
@@ -179,8 +181,15 @@ class MimeApps:
         return "application-x-executable", None
 
     def get_associations_for_desktop_file(self, desktop_id: str) -> list:
-        """Get all MIME types associated with a desktop file via Added Associations."""
-        return [mt for mt, ids in self.added_associations.items() if desktop_id in ids]
+        """Get all MIME types associated with a desktop file via Added Associations (user + local)."""
+        return [
+            mt
+            for mt, ids in {
+                **self.added_associations,
+                **self.local_added_associations,
+            }.items()
+            if desktop_id in ids
+        ]
 
     def build_mime_associations(self) -> dict:
         """Build mime-to-apps mapping from mimeinfo.cache and desktop files."""
@@ -219,8 +228,9 @@ class MimeApps:
                 if data["desktop_id"] not in mime_to_apps[mime_type]:
                     mime_to_apps[mime_type].append(data["desktop_id"])
 
-        # Merge in added associations from mimeapps.list
-        for mime_type, desktop_ids in self.added_associations.items():
+        # Merge in added associations from mimeapps.list (user + local)
+        all_added = {**self.added_associations, **self.local_added_associations}
+        for mime_type, desktop_ids in all_added.items():
             if mime_type not in mime_to_apps:
                 mime_to_apps[mime_type] = []
             for desktop_id in desktop_ids:
@@ -231,10 +241,10 @@ class MimeApps:
         return mime_to_apps
 
     def build_mime_defaults(self) -> dict:
-        """Build effective defaults with priority: user -> desktop -> inherent.
+        """Build effective defaults with priority: user -> local -> desktop -> inherent.
 
         Returns dict of {mime_type: {desktop_id, source}}
-        where source is one of: 'user', 'desktop', 'inherent'
+        where source is one of: 'user', 'local', 'desktop', 'inherent'
         """
         self._ensure_associations_cache()
 
@@ -259,7 +269,17 @@ class MimeApps:
                     "source": "desktop",
                 }
 
-        # User defaults, override everything
+        # Priority 3: Local defaults (~/.local/share/applications/mimeapps.list)
+        for desktop_id, mime_types in self.local_defaults.items():
+            if desktop_id not in desktop_file_paths:
+                continue
+            for mime_type in mime_types:
+                mime_defaults_effective[mime_type] = {
+                    "desktop_id": desktop_id,
+                    "source": "local",
+                }
+
+        # Priority 4: User defaults (~/.config/mimeapps.list), override everything
         for desktop_id, mime_types in self.defaults.items():
             if desktop_id not in desktop_file_paths:
                 continue
@@ -273,43 +293,59 @@ class MimeApps:
         return mime_defaults_effective
 
     def parse(self) -> None:
-        """Parse the user's mimeapps.list file."""
+        """Parse the user's mimeapps.list files."""
         self.defaults = {}
         self.added_associations = {}
+        self.local_defaults = {}
+        self.local_added_associations = {}
         self._other_sections = {}
         self._mime_associations = None
         self._mime_defaults_effective = None
         self._desktop_defaults = {}
 
-        if not os.path.exists(self.config_path):
+        self._parse_mimeapps_file(
+            self.config_path, self.defaults, self.added_associations
+        )
+
+        local_path = os.path.expanduser("~/.local/share/applications/mimeapps.list")
+        self._parse_mimeapps_file(
+            local_path, self.local_defaults, self.local_added_associations
+        )
+
+    def _parse_mimeapps_file(
+        self, path: str, defaults_dict: dict, added_dict: dict
+    ) -> None:
+        """Parse a mimeapps.list file into the provided dicts."""
+        if not os.path.exists(path):
             return
 
         config = configparser.ConfigParser(interpolation=None)
         try:
-            config.read(self.config_path)
+            config.read(path)
             if config.has_section("Default Applications"):
                 for mime_type, desktop_file in config.items("Default Applications"):
                     desktop_id = desktop_file.strip().split(";")[0]
-                    if desktop_id not in self.defaults:
-                        self.defaults[desktop_id] = []
-                    self.defaults[desktop_id].append(mime_type)
+                    if desktop_id not in defaults_dict:
+                        defaults_dict[desktop_id] = []
+                    defaults_dict[desktop_id].append(mime_type)
             if config.has_section("Added Associations"):
                 for mime_type, value in config.items("Added Associations"):
                     desktop_ids = [d.strip() for d in value.split(";") if d.strip()]
-                    self.added_associations[mime_type] = desktop_ids
+                    added_dict[mime_type] = desktop_ids
 
-            # Preserve other sections
-            for section in config.sections():
-                if section not in ("Default Applications", "Added Associations"):
-                    self._other_sections[section] = dict(config.items(section))
+            if path == self.config_path:
+                for section in config.sections():
+                    if section not in ("Default Applications", "Added Associations"):
+                        self._other_sections[section] = dict(config.items(section))
         except Exception as e:
             print(f"Error parsing mimeapps.list: {e}")
 
     def get_defaults_for_desktop_file(self, desktop_id: str) -> list:
-        """Get mime types this desktop file is the default for (user + desktop-specific)."""
+        """Get mime types this desktop file is the default for (user + local + desktop-specific)."""
         user_defaults = self.defaults.get(desktop_id, [])
+        local_defaults = self.local_defaults.get(desktop_id, [])
         desktop_defaults = self._desktop_defaults.get(desktop_id, [])
-        return list(dict.fromkeys(user_defaults + desktop_defaults))
+        return list(dict.fromkeys(user_defaults + local_defaults + desktop_defaults))
 
     def _ensure_associations_cache(self) -> None:
         """Ensure the associations cache is built."""
@@ -332,7 +368,7 @@ class MimeApps:
 
         Returns dict with:
         - desktop_id: The desktop file ID
-        - source: One of 'user', 'desktop', 'inherent'
+        - source: One of 'user', 'local', 'desktop', 'inherent'
         """
         self._ensure_defaults_cache()
         info = self._mime_defaults_effective.get(mime_type)
@@ -406,10 +442,13 @@ class MimeApps:
         self._remove_association(mime_type, desktop_id)
 
     def is_custom_association(self, desktop_id: str, mime_type: str) -> bool:
-        """Check if an association is custom (only in added_associations)."""
+        """Check if an association is custom (only in added_associations, user or local)."""
         return (
             mime_type in self.added_associations
             and desktop_id in self.added_associations[mime_type]
+        ) or (
+            mime_type in self.local_added_associations
+            and desktop_id in self.local_added_associations[mime_type]
         )
 
     def _build_default_map(self) -> dict:

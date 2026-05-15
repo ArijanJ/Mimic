@@ -55,6 +55,13 @@
   </screenshots>
 
   <releases>
+    <release version="1.1.1" date="2026-05-15">
+      <description translate="no">
+        <ul>
+            <li>Adds parsing of additional defaults file in ~/.local</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1.0" date="2026-05-14">
       <description translate="no">
         <ul>
