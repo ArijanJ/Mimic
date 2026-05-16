@@ -290,7 +290,7 @@ class MimicApplication(Adw.Application):
             application_name="Mimic",
             application_icon="io.github.arijanj.Mimic",
             developer_name="arijanj",
-            version="0.1.0",
+            version="1.1.2",
             copyright="© 2026 arijanj",
             license_type=Gtk.License.GPL_3_0,
             website="https://github.com/arijanj/Mimic",
