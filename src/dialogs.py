@@ -404,7 +404,7 @@ class AppDetailsDialog:
 
     def _on_delete_mime_type(self, mime_type, check, row_widget):
         if check.get_active():
-            self.mime_apps.remove_default(mime_type)
+            self.mime_apps.remove_default_for_desktop(mime_type, self.desktop_id)
         self.mime_apps.remove_association(mime_type, self.desktop_id)
         self.mime_apps.save()
         row_widget.set_visible(False)
@@ -413,8 +413,9 @@ class AppDetailsDialog:
             app.added_mime_types = [
                 mt for mt in app.added_mime_types if mt != mime_type
             ]
-            if mime_type in app.default_mime_types:
-                app.default_mime_types.remove(mime_type)
+            app.default_mime_types = self.mime_apps.get_defaults_for_desktop_file(
+                app.desktop_id
+            )
             app.refresh_mime_types()
 
         self._update_app_and_refresh(update_app)
@@ -465,8 +466,8 @@ class AppDetailsDialog:
                 print(f"Error saving: {e}")
 
             def update_app(app):
-                app.default_mime_types = self.mime_apps.defaults.get(
-                    self.desktop_id, []
+                app.default_mime_types = self.mime_apps.get_defaults_for_desktop_file(
+                    self.desktop_id
                 )
                 app.refresh_mime_types()
 
