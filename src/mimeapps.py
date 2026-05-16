@@ -496,6 +496,9 @@ class MimeApps:
 
     def save(self) -> None:
         """Write changes to mimeapps.list."""
+        if not self.defaults and not self.added_associations and not self._other_sections:
+            return
+
         sections = dict(self._other_sections)
 
         sections["Added Associations"] = {
@@ -505,27 +508,36 @@ class MimeApps:
         }
 
         os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
-        with open(self.config_path, "w") as f:
-            for section_name in ["Added Associations"]:
-                if section_name in sections and sections[section_name]:
-                    f.write(f"[{section_name}]\n")
-                    for key, value in sections[section_name].items():
-                        f.write(f"{key}={value}\n")
+
+        tmp_path = self.config_path + ".tmp"
+        try:
+            with open(tmp_path, "w") as f:
+                for section_name in ["Added Associations"]:
+                    if section_name in sections and sections[section_name]:
+                        f.write(f"[{section_name}]\n")
+                        for key, value in sections[section_name].items():
+                            f.write(f"{key}={value}\n")
+                        f.write("\n")
+
+                if self.defaults:
+                    f.write("[Default Applications]\n")
+                    for mime_type, lines in self.defaults.items():
+                        for line in lines:
+                            f.write(f"{mime_type}={';'.join(line)};\n")
                     f.write("\n")
 
-            if self.defaults:
-                f.write("[Default Applications]\n")
-                for mime_type, lines in self.defaults.items():
-                    for line in lines:
-                        f.write(f"{mime_type}={';'.join(line)};\n")
-                f.write("\n")
+                for section_name, items in sections.items():
+                    if section_name not in ("Added Associations", "Default Applications"):
+                        f.write(f"[{section_name}]\n")
+                        for key, value in items.items():
+                            f.write(f"{key}={value}\n")
+                        f.write("\n")
 
-            for section_name, items in sections.items():
-                if section_name not in ("Added Associations", "Default Applications"):
-                    f.write(f"[{section_name}]\n")
-                    for key, value in items.items():
-                        f.write(f"{key}={value}\n")
-                    f.write("\n")
+            os.replace(tmp_path, self.config_path)
+        except Exception as e:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+            print(f"Error saving mimeapps.list: {e}")
 
         self._mime_defaults_effective = None
         self._mime_associations = None
