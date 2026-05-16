@@ -55,6 +55,15 @@
   </screenshots>
 
   <releases>
+    <release version="1.1.2" date="2026-05-16">
+      <description translate="no">
+        <ul>
+            <li>Handle multiple-app defaults and duplicate entires</li>
+            <li>Saves to temporary file before making changes</li>
+            <li>Fixes some drop shadows</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1.1" date="2026-05-15">
       <description translate="no">
         <ul>
