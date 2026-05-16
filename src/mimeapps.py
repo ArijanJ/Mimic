@@ -449,12 +449,9 @@ class MimeApps:
         if mime_type not in self.defaults:
             return
         self.defaults[mime_type] = [
-            [d for d in line if d != desktop_id]
-            for line in self.defaults[mime_type]
+            [d for d in line if d != desktop_id] for line in self.defaults[mime_type]
         ]
-        self.defaults[mime_type] = [
-            line for line in self.defaults[mime_type] if line
-        ]
+        self.defaults[mime_type] = [line for line in self.defaults[mime_type] if line]
         if not self.defaults[mime_type]:
             del self.defaults[mime_type]
         self._mime_defaults_effective = None
@@ -496,7 +493,11 @@ class MimeApps:
 
     def save(self) -> None:
         """Write changes to mimeapps.list."""
-        if not self.defaults and not self.added_associations and not self._other_sections:
+        if (
+            not self.defaults
+            and not self.added_associations
+            and not self._other_sections
+        ):
             return
 
         sections = dict(self._other_sections)
@@ -527,7 +528,10 @@ class MimeApps:
                     f.write("\n")
 
                 for section_name, items in sections.items():
-                    if section_name not in ("Added Associations", "Default Applications"):
+                    if section_name not in (
+                        "Added Associations",
+                        "Default Applications",
+                    ):
                         f.write(f"[{section_name}]\n")
                         for key, value in items.items():
                             f.write(f"{key}={value}\n")

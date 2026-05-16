@@ -458,7 +458,7 @@ class AppDetailsDialog:
                     self.mime_apps.add_default(mt, self.desktop_id)
             if to_remove:
                 for mt in to_remove:
-                    self.mime_apps.remove_default(mt)
+                    self.mime_apps.remove_default_for_desktop(mt, self.desktop_id)
 
             try:
                 self.mime_apps.save()
