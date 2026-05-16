@@ -64,6 +64,7 @@ def _load_first_valid_icon(apps, icon_theme, size=32):
         if app_data.icon_file:
             img = Gtk.Image.new_from_file(app_data.icon_file)
             img.set_pixel_size(size)
+            img.add_css_class("icon-dropshadow")
             return img
 
         else:
