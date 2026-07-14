@@ -277,10 +277,10 @@ class AppList(Gtk.Box):
                 row.set_subtitle(
                     f"{desktop_id}\nImplicit {formatted_desktop_name} default"
                 )
+            elif is_current and default_source == "system":
+                row.set_subtitle(f"{desktop_id}\nSystem-wide default")
             elif is_current and default_source == "local":
-                row.set_subtitle(
-                    f"{desktop_id}\nDefault set in an unmodifiable location"
-                )
+                row.set_subtitle(f"{desktop_id}\nLocal default")
             elif is_current and default_source == "inherent":
                 row.set_subtitle(f"{desktop_id}\nSystem default (not explicitly set)")
             elif self.mime_type not in app_data.all_mime_types:
@@ -450,6 +450,11 @@ class MimeTypeList(Gtk.Box):
             and default_info["source"] == "desktop"
             and default_info["desktop_id"] == self.desktop_id
         )
+        is_system_default = (
+            default_info
+            and default_info["source"] == "system"
+            and default_info["desktop_id"] == self.desktop_id
+        )
         is_local_default = (
             default_info
             and default_info["source"] == "local"
@@ -479,6 +484,11 @@ class MimeTypeList(Gtk.Box):
             )
             row.set_tooltip_text(
                 f"This default is set by {desktop_name}. Select a different app to overwrite it."
+            )
+        elif is_system_default:
+            check.set_sensitive(False)
+            row.set_tooltip_text(
+                f"This default is set in an unmodifiable location. Set a different app for '{mime_type}' to overwrite it."
             )
         elif is_local_default:
             check.set_sensitive(False)
