@@ -11,6 +11,8 @@ jobs:
 
       - name: Lint
         uses: astral-sh/ruff-action@v3
+        with:
+          version: "0.17.6"
 
       - name: Format
         run: ruff format --check --diff # previous step sets ruff up

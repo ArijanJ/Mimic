@@ -474,12 +474,7 @@ class MimeTypeList(Gtk.Box):
             row.set_tooltip_text(
                 f"This default is set by {desktop_name}. Select a different app to overwrite it."
             )
-        elif is_system_default:
-            check.set_sensitive(False)
-            row.set_tooltip_text(
-                f"This default is set in an unmodifiable location. Set a different app for '{mime_type}' to overwrite it."
-            )
-        elif is_local_default:
+        elif is_system_default or is_local_default:
             check.set_sensitive(False)
             row.set_tooltip_text(
                 f"This default is set in an unmodifiable location. Set a different app for '{mime_type}' to overwrite it."

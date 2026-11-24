@@ -1,7 +1,6 @@
 import configparser
 import os
 from dataclasses import dataclass, field
-from typing import Optional
 
 from gi.repository import Gio
 
@@ -15,7 +14,7 @@ class DesktopAppInfo:
     name: str
     icon_name: str
     exec: str
-    icon_file: Optional[str] = None
+    icon_file: str | None = None
     base_mime_types: list = field(default_factory=list)
     added_mime_types: list = field(default_factory=list)
     default_mime_types: list = field(default_factory=list)
@@ -90,7 +89,7 @@ def _get_mimeapps_list_paths() -> dict:
 
 class MimeApps:
     def __init__(
-        self, config_path: Optional[str] = None, settings: Optional[Gio.Settings] = None
+        self, config_path: str | None = None, settings: Gio.Settings | None = None
     ):
         paths = _get_mimeapps_list_paths()
         if config_path is None:
@@ -105,8 +104,8 @@ class MimeApps:
         self.system_added_associations: dict = {}
         self.desktop_specific_defaults: dict = {}  # {desktop_name: defaults_dict}
         self._other_sections: dict = {}
-        self._mime_associations: Optional[dict] = None
-        self._mime_defaults_effective: Optional[dict] = None
+        self._mime_associations: dict | None = None
+        self._mime_defaults_effective: dict | None = None
 
     def _get_applications_dirs(self) -> list:
         """Get all applications directories in XDG order."""
@@ -160,12 +159,12 @@ class MimeApps:
 
         return desktop_file_paths
 
-    def _parse_desktop_file(self, path: str) -> Optional[dict]:
+    def _parse_desktop_file(self, path: str) -> dict | None:
         """Parse a desktop file and return all relevant data."""
         config = configparser.ConfigParser(interpolation=None)
         try:
             config.read(path)
-        except Exception:
+        except Exception:  # noqa: BLE001 - Skip an unreadable launcher.
             return None
 
         if not config.has_section("Desktop Entry"):
@@ -191,7 +190,7 @@ class MimeApps:
             "mime_types": mime_types,
         }
 
-    def _load_icon(self, icon_name: str, icon_file: Optional[str] = None):
+    def _load_icon(self, icon_name: str, icon_file: str | None = None):
         """Load icon as file path or themed icon name."""
         if not os.path.isabs(icon_name):
             # Themed icon - return the name for later lookup
@@ -248,7 +247,7 @@ class MimeApps:
                                 for desktop_id in desktop_ids:
                                     if desktop_id not in mime_to_apps[mime_type]:
                                         mime_to_apps[mime_type].append(desktop_id)
-                except Exception:
+                except Exception:  # noqa: BLE001, S110 - Fall back to scanning launchers.
                     pass
 
         desktop_file_paths = self._get_desktop_file_paths()
@@ -413,7 +412,7 @@ class MimeApps:
                         defaults_dict[mime_type].append(desktop_ids)
 
     def _parse_mimeapps_file(
-        self, path: str, defaults_dict: dict, added_dict: Optional[dict] = None
+        self, path: str, defaults_dict: dict, added_dict: dict | None = None
     ) -> None:
         """Parse a mimeapps.list file into the provided dicts.
 
@@ -439,7 +438,7 @@ class MimeApps:
                 for section in config.sections():
                     if section not in ("Default Applications", "Added Associations"):
                         self._other_sections[section] = dict(config.items(section))
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - Retain any associations already parsed.
             print(f"Error parsing mimeapps.list: {e}")
 
     def get_defaults_for_desktop_file(self, desktop_id: str) -> list:
@@ -472,13 +471,13 @@ class MimeApps:
         if self._mime_defaults_effective is None:
             self.build_mime_defaults()
 
-    def get_default_for_mime_type(self, mime_type: str) -> Optional[str]:
+    def get_default_for_mime_type(self, mime_type: str) -> str | None:
         """Get the default desktop ID for a mime type."""
         self._ensure_defaults_cache()
         result = self._mime_defaults_effective.get(mime_type)
         return result["desktop_id"] if result else None
 
-    def get_default_info_for_mime_type(self, mime_type: str) -> Optional[dict]:
+    def get_default_info_for_mime_type(self, mime_type: str) -> dict | None:
         """Get default info dict with desktop_id and source.
 
         Returns dict with:
@@ -602,17 +601,20 @@ class MimeApps:
         try:
             with open(tmp_path, "w") as f:
                 for section_name in ["Added Associations"]:
-                    if section_name in sections and sections[section_name]:
+                    if sections.get(section_name):
                         f.write(f"[{section_name}]\n")
-                        for key, value in sections[section_name].items():
-                            f.write(f"{key}={value}\n")
+                        f.writelines(
+                            f"{key}={value}\n"
+                            for key, value in sections[section_name].items()
+                        )
                         f.write("\n")
 
                 if self.defaults:
                     f.write("[Default Applications]\n")
                     for mime_type, lines in self.defaults.items():
-                        for line in lines:
-                            f.write(f"{mime_type}={';'.join(line)};\n")
+                        f.writelines(
+                            f"{mime_type}={';'.join(line)};\n" for line in lines
+                        )
                     f.write("\n")
 
                 for section_name, items in sections.items():
@@ -621,12 +623,11 @@ class MimeApps:
                         "Default Applications",
                     ):
                         f.write(f"[{section_name}]\n")
-                        for key, value in items.items():
-                            f.write(f"{key}={value}\n")
+                        f.writelines(f"{key}={value}\n" for key, value in items.items())
                         f.write("\n")
 
             os.replace(tmp_path, self.config_path)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - Clean up the temporary file on failure.
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
             print(f"Error saving mimeapps.list: {e}")
@@ -670,7 +671,7 @@ class MimeApps:
 
         return results
 
-    def get_desktop_app_info_by_id(self, desktop_id: str) -> Optional[DesktopAppInfo]:
+    def get_desktop_app_info_by_id(self, desktop_id: str) -> DesktopAppInfo | None:
         """Get a single desktop application as DesktopAppInfo object."""
         desktop_file_paths = self._get_desktop_file_paths()
         if desktop_id not in desktop_file_paths:
@@ -690,13 +691,13 @@ class MimeApps:
         """
         return self.desktop_specific_defaults
 
-    def set_selected_desktop(self, desktop_name: Optional[str]) -> None:
+    def set_selected_desktop(self, desktop_name: str | None) -> None:
         """Set which desktop environment's defaults to use."""
         if self.settings:
             self.settings.set_string("selected-desktop", desktop_name or "")
         self._mime_defaults_effective = None
 
-    def get_selected_desktop(self) -> Optional[str]:
+    def get_selected_desktop(self) -> str | None:
         """Get the currently selected desktop environment."""
         if self.settings:
             value = self.settings.get_string("selected-desktop")

@@ -446,7 +446,7 @@ class AppDetailsDialog:
         add_dialog.present(self.row.get_root())
 
     def _update_app_and_refresh(self, update_fn):
-        for _, apps_in_group in self.grouped_apps.items():
+        for apps_in_group in self.grouped_apps.values():
             for app in apps_in_group:
                 if app.desktop_id == self.desktop_id:
                     if self.apps_list_widget:
@@ -476,7 +476,7 @@ class AppDetailsDialog:
 
             try:
                 self.mime_apps.save()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - Keep the dialog responsive on callback failure.
                 print(f"Error saving: {e}")
 
             def update_app(app):
@@ -654,14 +654,14 @@ class AddAssociationDialog:
                     app.default_mime_types.append(text)
                 app.refresh_mime_types()
 
-            for _, apps_in_group in self.grouped_apps.items():
+            for apps_in_group in self.grouped_apps.values():
                 for app in apps_in_group:
                     if app.desktop_id == self.desktop_id:
                         if self.apps_list_widget:
                             update_app(app)
                             self.apps_list_widget.update_app_row(self.desktop_id)
                         return
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - Keep the dialog responsive on callback failure.
             print(f"Error while saving: {e}")
 
     def _on_cancel(self, btn):
