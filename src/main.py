@@ -262,7 +262,12 @@ class MimicWindow(Adw.ApplicationWindow):
 
     def on_mime_type_row_activated(self, row, mime_type):
         create_mime_type_dialog(
-            row, mime_type, self.mime_apps, self.icon_theme, self._grouped_apps
+            row,
+            mime_type,
+            self.mime_apps,
+            self.icon_theme,
+            self.apps_list_widget,
+            self._grouped_apps,
         )
 
     def on_app_row_activated(self, row, app_data):

@@ -124,11 +124,14 @@ class DialogState:
 class MimeTypeDialog:
     """Dialog for selecting default application for a MIME type."""
 
-    def __init__(self, parent, mime_type, mime_apps, icon_theme, grouped_apps):
+    def __init__(
+        self, parent, mime_type, mime_apps, icon_theme, apps_list_widget, grouped_apps
+    ):
         self.parent = parent
         self.mime_type = mime_type
         self.mime_apps = mime_apps
         self.icon_theme = icon_theme
+        self.apps_list_widget = apps_list_widget
         self.grouped_apps = grouped_apps
         self.associated_apps = mime_apps.get_apps_for_mime_type(mime_type)
         self.default_info = mime_apps.get_default_info_for_mime_type(mime_type)
@@ -177,9 +180,15 @@ class MimeTypeDialog:
         return content
 
     def _on_add_association(self):
-        def on_app_selected(desktop_id):
+        def on_app_selected(app_data):
+            desktop_id = app_data.desktop_id
             self.mime_apps.add_association(self.mime_type, desktop_id)
             GLib.idle_add(self.mime_apps.save)
+
+            if self.mime_type not in app_data.added_mime_types:
+                app_data.added_mime_types.append(self.mime_type)
+            app_data.refresh_mime_types()
+            self.apps_list_widget.update_app_row(desktop_id)
 
             self.app_selection_widget._items.append(desktop_id)
             self.app_selection_widget.clear()
@@ -284,7 +293,7 @@ class SelectAppDialog:
 
     def _on_app_activated(self, row, app_data):
         self.dialog.close()
-        self.on_select(app_data.desktop_id)
+        self.on_select(app_data)
 
     def _on_cancel(self, btn):
         self.dialog.close()
@@ -748,9 +757,13 @@ class AddAssociationDialog:
         return self.dialog
 
 
-def create_mime_type_dialog(parent, mime_type, mime_apps, icon_theme, grouped_apps):
+def create_mime_type_dialog(
+    parent, mime_type, mime_apps, icon_theme, apps_list_widget, grouped_apps
+):
     """Create dialog for selecting default application for a MIME type."""
-    MimeTypeDialog(parent, mime_type, mime_apps, icon_theme, grouped_apps).present()
+    MimeTypeDialog(
+        parent, mime_type, mime_apps, icon_theme, apps_list_widget, grouped_apps
+    ).present()
 
 
 def create_app_details_dialog(
