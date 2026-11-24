@@ -287,7 +287,7 @@ class MimicApplication(Adw.Application):
             application_name="Mimic",
             application_icon="io.github.arijanj.Mimic",
             developer_name="arijanj",
-            version="1.1.4",
+            version=self.version,
             copyright="© 2026 arijanj",
             license_type=Gtk.License.GPL_3_0,
             website="https://github.com/arijanj/Mimic",
@@ -322,12 +322,13 @@ class MimicApplication(Adw.Application):
         if shortcuts:
             self.set_accels_for_action(f"app.{name}", shortcuts)
 
-    def __init__(self):
+    def __init__(self, version):
         super().__init__(
             application_id="io.github.arijanj.Mimic",
             flags=Gio.ApplicationFlags.DEFAULT_FLAGS,
             resource_base_path="/io/github/arijanj/Mimic",
         )
+        self.version = version
         self.create_action("quit", lambda *_: self.quit(), ["<control>q"])
         self.create_action("about", self.on_about_action)
         self.create_action("shortcuts", self.on_shortcuts_action, ["<Control>question"])
@@ -348,5 +349,5 @@ class MimicApplication(Adw.Application):
 def main(version):
     """The application's entry point."""
 
-    app = MimicApplication()
+    app = MimicApplication(version)
     return app.run(sys.argv)
