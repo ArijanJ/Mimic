@@ -13,6 +13,7 @@
         "--filesystem=~/.local/share/applications:ro",
         "--filesystem=~/.local/share/icons:ro",
         "--filesystem=~/.local/share/flatpak/exports/share/applications:ro",
+        "--filesystem=~/.local/share/flatpak/app:ro",
         "--filesystem=/var/lib/flatpak/app:ro",
         "--filesystem=/var/lib/flatpak/exports/share/applications:ro",
         "--filesystem=/var/lib/flatpak/exports/share/icons:ro",

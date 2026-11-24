@@ -153,7 +153,8 @@ class MimeApps:
                             and not link_target.startswith("/nix/store")
                         ):
                             link_target = os.path.join(host, link_target.lstrip("/"))
-                        path = link_target
+                        if os.path.isfile(link_target):
+                            path = link_target
                     if os.path.isfile(path):
                         desktop_file_paths[filename] = path
 
