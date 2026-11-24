@@ -54,7 +54,6 @@ class AppRow(Adw.ActionRow):
         self.set_hexpand(True)
 
         self._desktop_id = app_data.desktop_id
-        self._exec = app_data.exec
         self._subtitle_mode = subtitle_mode
         self._has_mime = False
 
@@ -138,6 +137,8 @@ class AppList(Gtk.Box):
         self._listbox.set_hexpand(True)
         self._listbox.set_vexpand(False)
         self._listbox.set_valign(Gtk.Align.START)
+        if self.mode == "grouped":
+            self._listbox.set_filter_func(self._matches_search)
         self.append(self._listbox)
         self.set_vexpand(False)
         self.set_valign(Gtk.Align.START)
@@ -317,43 +318,31 @@ class AppList(Gtk.Box):
 
             self._listbox.append(add_row)
 
-    def filter(self, search_text):
-        """Filter visible rows based on search text (grouped mode only)."""
-        if self.mode != "grouped":
-            return
+    def bind_search_entry(self, entry):
+        """Connect a search entry to this grouped app list."""
+        entry.set_placeholder_text(_("Search applications…"))
+        entry.connect("search-changed", self._on_search_changed)
+        self._on_search_changed(entry)
 
-        self._search_text = search_text.lower()
-        for row in self._rows:
-            row._search_text = self._search_text
-        if self._listbox:
-            self._listbox.invalidate_filter()
+    def _on_search_changed(self, entry):
+        self._search_text = entry.get_text().strip().casefold()
+        self._listbox.invalidate_filter()
 
-    def get_filter_func(self):
-        """Return a filter function for the Gtk.ListBox (grouped mode only)."""
-        if self.mode != "grouped":
-            return lambda row: True
+    def _matches_search(self, row):
+        if not self._search_text:
+            return True
 
-        def filter_func(row):
-            if isinstance(row, Adw.ExpanderRow):
-                if not hasattr(row, "_search_text"):
-                    return True
-                search_text = row._search_text
-                if not search_text:
-                    return True
-                for child_row in getattr(row, "_child_rows", []):
-                    title = child_row.get_title().lower()
-                    exec_text = getattr(child_row, "_exec", "").lower()
-                    if search_text in title or search_text in exec_text:
-                        return True
-                return False
-            search_text = getattr(row, "_search_text", "")
-            if not search_text:
-                return True
-            title = row.get_title().lower()
-            exec_text = getattr(row, "_exec", "").lower()
-            return search_text in title or search_text in exec_text
-
-        return filter_func
+        rows = row._child_rows if isinstance(row, Adw.ExpanderRow) else (row,)
+        return any(
+            self._search_text in value.casefold()
+            for child in rows
+            for value in (
+                child.app_data.name,
+                child.app_data.desktop_id,
+                child.app_data.exec,
+            )
+            if value
+        )
 
     def set_show_all_apps(self, show_all):
         """Toggle showing apps without MIME associations (grouped mode only)."""

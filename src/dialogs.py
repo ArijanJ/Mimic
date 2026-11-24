@@ -311,6 +311,9 @@ class SelectAppDialog:
         )
         app_list.populate(self.grouped_apps, self._on_app_activated)
 
+        search_entry = Gtk.SearchEntry()
+        app_list.bind_search_entry(search_entry)
+
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_vexpand(False)
         scrolled.set_valign(Gtk.Align.START)
@@ -327,6 +330,7 @@ class SelectAppDialog:
         btn_box.append(cancel_btn)
 
         content.append(heading_label)
+        content.append(search_entry)
         content.append(scrolled)
         content.append(btn_box)
 
@@ -337,6 +341,7 @@ class SelectAppDialog:
 
         cancel_btn.connect("clicked", self._on_cancel)
         self.dialog.present(self.parent.get_root())
+        search_entry.grab_focus()
 
         return self.dialog
 

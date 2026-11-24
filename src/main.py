@@ -77,9 +77,7 @@ class MimicWindow(Adw.ApplicationWindow):
             show_all_apps=self.show_all_apps,
         )
         self.apps_scroll.set_child(self.apps_list_widget)
-        self.apps_list_widget._listbox.set_filter_func(self.filter_apps_row)
-
-        self.apps_search_bar.connect("search-changed", self.on_apps_search_changed)
+        self.apps_list_widget.bind_search_entry(self.apps_search_bar)
         self.filetypes_search_bar.connect(
             "search-changed", self.on_filetypes_search_changed
         )
@@ -240,9 +238,6 @@ class MimicWindow(Adw.ApplicationWindow):
         )
         _show_toast(self.toast_overlay, msg)
 
-    def on_apps_search_changed(self, entry):
-        self.apps_list_widget.filter(entry.get_text())
-
     def on_filetypes_search_changed(self, entry):
         search_text = entry.get_text().lower()
 
@@ -264,9 +259,6 @@ class MimicWindow(Adw.ApplicationWindow):
                             has_visible_rows = True
 
             expander.set_visible(has_visible_rows)
-
-    def filter_apps_row(self, row):
-        return self.apps_list_widget.get_filter_func()(row)
 
     def on_mime_type_row_activated(self, row, mime_type):
         create_mime_type_dialog(
